@@ -28,6 +28,7 @@ def get_audio_stream_url(video_url):
     video_title = yt.title
     video_author = yt.author
     audio_stream = yt.streams.filter(only_audio=True).first()
+    print(audio_stream.url)
     return video_title, video_author, audio_stream.url
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -68,11 +69,23 @@ async def add(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Function to play the current audio stream
 async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if current_last_song_index < len(playlist_info) and current_last_song_index != 0:
-        media_player.play_item_at_index(current_last_song_index)
+    specific_song_index = update.message.text
+    if len(specific_song_index.split()) == 2:
+        if specific_song_index.split()[1].isnumeric():
+            index_query = int(specific_song_index.split()[1])
+            if index_query >= 0 and index_query <= len(playlist_info):
+                media_player.play_item_at_index(index_query)
+                current_song = get_current_track()
+                await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Now playing: *{current_song}*", parse_mode="Markdown")
+            else:
+                await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Media index out of range between {0} - {len(playlist_info)}")
+        else:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Wrong argument type number.")
+    elif current_last_song_index < len(playlist_info) and current_last_song_index != 0 and not media_player.is_playing():
+        media_player.play_item_at_index(current_last_song_index + 1)
         current_song = get_current_track()
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Now playing: *{current_song}*", parse_mode="Markdown")
-    elif not len(playlist_info) == 0:
+    elif current_last_song_index == 0:
         media_player.play()
         current_song = get_current_track()
         await context.bot.send_message(chat_id=update.effective_chat.id, text=f"Now playing: *{current_song}*", parse_mode="Markdown")
@@ -131,7 +144,7 @@ async def playlist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for idx, song_info in enumerate(playlist_info, start=0):
         song_text = f"{idx}. {song_info['video_title']}. Channel: {song_info['video_author']}"
         if current_song_index and idx == current_song_index:
-            song_text += "  *Now playing*"
+            song_text += "  *<<<<Now playing*"
         playlist_text += song_text + "\n"
 
     await context.bot.send_message(chat_id=update.effective_chat.id, text=playlist_text, parse_mode="Markdown")
@@ -170,7 +183,6 @@ def get_current_track_index():
 def on_end_reached(event):
     global current_last_song_index
     current_last_song_index += 1
-    print(current_last_song_index)
     
 
 # Initialize the Telegram bot
