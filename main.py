@@ -1,6 +1,7 @@
 import os
 # from pytube import YouTube
 from pytubefix import YouTube
+from pytube.cli import on_progress
 import logging
 import vlc
 from telegram import Update
@@ -27,8 +28,8 @@ logging.basicConfig(
 )
 
 def get_audio_stream_by_url(video_url):
-    yt = YouTube(video_url)
-    yt.check_availability()
+    yt = YouTube(video_url, on_progress_callback = on_progress)
+    # yt.check_availability()
     video_title = yt.title
     video_author = yt.author
     audio_stream = yt.streams.filter(only_audio=True).first()
